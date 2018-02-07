@@ -1,7 +1,7 @@
 import tinymesh
-import json, requests
+import json
+import requests
 import cgi
-from pprint import pprint
 
 
 class APIObject(dict):
@@ -100,12 +100,6 @@ class APIResource(APIObject):
         return self._req, self
 
     @classmethod
-    def read(cls, key, auth=None, **params):
-        url = "%s/%s" % (cls.class_url(), key)
-        httpreq, resp = APIResource._get(cls, url, auth=auth, **params)
-        return cls._construct(resp._obj)
-
-    @classmethod
     def class_name(cls):
         if cls == APIResource:
             raise NotImplementedError('Can\'t use abstract class. APIResource')
@@ -117,6 +111,10 @@ class APIResource(APIObject):
         cls_name = cls.class_name()
         return tinymesh.apibase + "/v2/%s" % (cls_name,)
 
-    def resource_url(self):
-        base = self.apibase + self.class_url
-        return base
+    def resource_url(self, key=None):
+        base = self.class_url()
+
+        if key is not None:
+            return "%s/%s" % (base, key)
+        else:
+            return base
