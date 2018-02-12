@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
-import os, sys
-from tinymesh import resources, auth
+import os
+import sys
+from tinymesh_http import resources, auth
 import argparse
 from pprint import pprint
 
-
-token = b"koUl1ZoL7L/0+hrinsrBpjpOaizDC5CqQgkAUtm4DMpgEIo11tn0LHRL5gSUtbfJCy5N5424OMqU/NEA/SSzFw=="
-fingerprint = "f98baed49376af73c741ece9c8fd48acfae69efdd6d097beba10abc79da1c076"
-
-token = None
 
 parser = argparse.ArgumentParser(description="Tiny Mesh Cloud Client",
                                  add_help=True)
@@ -30,12 +26,15 @@ parser.add_argument('command', help="""
 args = parser.parse_args()
 
 
+apiauth = None
 if args.token:
-    token = args.token
+    apiauth = auth.TokenV1Auth(args.token)
 elif args.auth:
-    pass
+    username, password = args.auth.split(":")
+    apiauth = apiauth.BasicAuth(username, password)
 elif 'TM_API_TOKEN' in os.environ:
     token = bytes(os.environ['TM_API_TOKEN'], 'utf-8')
+    apiauth = auth.TokenV1Auth(token)
 else:
     try:
         with open(os.path.expanduser("~/.tinymesh/token"), 'rb') as fd:
@@ -43,10 +42,10 @@ else:
             # lazy, ignorant way of removing newlines from token
             if 10 == token[len(token)-1]:
                 token = token[:len(token)-1]
+
+            apiauth = auth.TokenV1Auth(token)
     except:
         pass
-
-auth = auth.TokenV1Auth(token)
 
 
 if 'list' == args.command[0]:
@@ -55,9 +54,9 @@ if 'list' == args.command[0]:
         print("No resource type specified")
         sys.exit(1)
     elif 'network' == args.command[1]:
-        pprint(resources.Network.list(auth))
+        pprint(resources.Network.list(apiauth))
     elif 'organization' == args.command[1]:
-        pprint(resources.Organization.list(auth))
+        pprint(resources.Organization.list(apiauth))
     else:
         parser.print_usage()
         print("Can't list unknown resource", args.command[1])
@@ -69,17 +68,12 @@ elif 'read' == args.command[0]:
         print("No resource type specified")
         sys.exit(1)
     if 'network' == args.command[1]:
-        pprint(resources.Network.read(args.command[2], auth))
+        pprint(resources.Network.read(args.command[2], apiauth))
     elif 'organization' == args.command[1]:
-        pprint(resources.Network.read(args.command[1], auth))
+        pprint(resources.Network.read(args.command[1], apiauth))
     else:
         parser.print_usage()
         print("Can't read unknown resource", args.command[1])
         sys.exit(1)
 else:
     parser.print_usage()
-
-#if
-#
-#networks = resources.Organization.list(auth)
-#

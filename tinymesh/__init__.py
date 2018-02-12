@@ -6,6 +6,6 @@ from tinymesh.error import (  # noqa
     PermissionError,
     InvalidRequestError,
     NotFoundError,
-    TinymeshError)
+    TinymeshHTTPError)
 
-apibase = "https://http.cloud.tiny-mesh.com"
+apibase = "https://http.cloud.tiny-mesh.com/v2"

@@ -1,4 +1,4 @@
-class TinymeshError(Exception):
+class TinymeshHTTPError(Exception):
 
     def __init__(self,
                  message=None,
@@ -6,7 +6,7 @@ class TinymeshError(Exception):
                  http_status=None,
                  json_body=None, headers=None):
 
-        super(TinymeshError, self).__init__(message)
+        super(TinymeshHTTPError, self).__init__(message)
 
         self._message = message
         self.http_body = http_body
@@ -26,21 +26,21 @@ class TinymeshError(Exception):
         return self.__unicode__()
 
 
-class APIError(TinymeshError):
+class APIError(TinymeshHTTPError):
     pass
 
 
-class InvalidRequestError(TinymeshError):
+class InvalidRequestError(TinymeshHTTPError):
     pass
 
 
-class AuthenticationError(TinymeshError):
+class AuthenticationError(TinymeshHTTPError):
     pass
 
 
-class PermissionError(TinymeshError):
+class PermissionError(TinymeshHTTPError):
     pass
 
 
-class NotFoundError(TinymeshError):
+class NotFoundError(TinymeshHTTPError):
     pass

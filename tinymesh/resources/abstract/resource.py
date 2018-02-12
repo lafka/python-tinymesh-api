@@ -2,6 +2,7 @@ import tinymesh
 import json
 import requests
 import cgi
+from tinymesh import error
 
 
 class APIObject(dict):
@@ -89,15 +90,71 @@ class APIObject(dict):
 
 class APIResource(APIObject):
 
-    def _get(self, url, *arg, **args):
-        self._req = requests.get(url, *arg, **args)
+    def _post(self, url, body, *arg, **kwargs):
+
+        stream = kwargs.get('stream', False)
+
+        headers = kwargs.get('headers', {})
+
+        if body is not None:
+            if not isinstance(body, str):
+                body = json.dumps(body)
+                headers['content-type'] = 'application/json'
+
+        self._req = requests.post(url,
+                                  *arg,
+                                  data=body,
+                                  headers=headers,
+                                  **kwargs)
+
+        if self._req.encoding is None:
+            self._req.encoding = 'utf-8'
 
         mimetype, _opts = cgi.parse_header(self._req.headers['content-type'])
 
-        if 'text/json' == mimetype or 'application/json' == mimetype:
+        if not stream and ('text/json' == mimetype
+                           or 'application/json' == mimetype):
             self._obj = json.loads(self._req.text)
 
-        return self._req, self
+        if 200 == self._req.status_code:
+            return self._req, self
+        if 201 == self._req.status_code:
+            return self._req, self
+        elif 401 == self._req.status_code:
+            raise error.AuthenticationError("Failed to authenticate request",
+                                            self._req.text,
+                                            self._req.status_code,
+                                            self._obj,
+                                            self._req.headers)
+        else:
+            raise error.InvalidRequest("Somthing wrong",
+                                       self._req.text,
+                                       self._req.status_code,
+                                       self._obj,
+                                       self._req.headers)
+
+    def _get(self, url, *arg, **args):
+        stream = args.get('stream', False)
+
+        self._req = requests.get(url, *arg, **args)
+
+        if self._req.encoding is None:
+            self._req.encoding = 'utf-8'
+
+        mimetype, _opts = cgi.parse_header(self._req.headers['content-type'])
+
+        if not stream and ('text/json' == mimetype
+                           or 'application/json' == mimetype):
+            self._obj = json.loads(self._req.text)
+
+        if 200 == self._req.status_code:
+            return self._req, self
+        elif 401 == self._req.status_code:
+            raise error.AuthenticationError("Failed to authenticate request",
+                                            self._req.text,
+                                            self._req.status_code,
+                                            self._obj,
+                                            self._req.headers)
 
     @classmethod
     def class_name(cls):
@@ -109,7 +166,7 @@ class APIResource(APIObject):
     @classmethod
     def class_url(cls):
         cls_name = cls.class_name()
-        return tinymesh.apibase + "/v2/%s" % (cls_name,)
+        return "%s/%s" % (tinymesh.apibase, cls_name,)
 
     def resource_url(self, key=None):
         base = self.class_url()

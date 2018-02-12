@@ -3,6 +3,7 @@ from hashlib import sha256 as sha256
 from base64 import b64encode
 from requests.auth import HTTPBasicAuth, AuthBase
 
+
 class APIAuth(AuthBase):
     @classmethod
     def authenticate(cls):
