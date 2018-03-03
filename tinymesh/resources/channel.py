@@ -36,7 +36,8 @@ class Channel(CreateableResource,
             return self._req.iter_lines(chunk_size=None, **params)
 
         @classmethod
-        def class_url(cls):
+        def class_url(cls, apibase=None):
+            apibase = apibase if apibase is not None else tinymesh.apibase
             return "%s/%s" % (tinymesh.apibase, "_channels/io")
 
         def resource_url(self, source):

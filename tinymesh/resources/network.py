@@ -11,3 +11,13 @@ class Network(ReadableResource,
     """
     API Resources related to networks
     """
+
+    def resource_url(self, source=None):
+        # @todo should check if call is coming from ListableResource before
+        #       assuming anything about keys
+        baseurl = self.class_url()
+
+        if 'network' in source:
+            return "%s/%s" % (baseurl, source['network'])
+        else:
+            return baseurl

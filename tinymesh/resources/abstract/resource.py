@@ -2,12 +2,15 @@ import tinymesh
 import json
 import requests
 import cgi
+import logging
 from tinymesh import error
 
 
 class APIObject(dict):
-    def __init__(self, key=None, last_response=None, **params):
+    def __init__(self, key=None, last_response=None, apibase=None, **params):
         super(APIObject, self).__init__()
+
+        self._apibase = apibase if apibase is not None else tinymesh.apibase
 
         self._unsaved_values = set()
         self._transient_values = set()
@@ -79,8 +82,8 @@ class APIObject(dict):
         self.update(state)
 
     @classmethod
-    def _construct(cls, source):
-        _obj = cls(source['key'])
+    def _construct(cls, source, **kwargs):
+        _obj = cls(source['key'], **kwargs)
 
         for k in source:
             _obj[k] = source[k]
@@ -127,34 +130,69 @@ class APIResource(APIObject):
                                             self._obj,
                                             self._req.headers)
         else:
-            raise error.InvalidRequest("Somthing wrong",
-                                       self._req.text,
-                                       self._req.status_code,
-                                       self._obj,
-                                       self._req.headers)
+            raise error.APIError("POST: Unhandeled API Error\n\n%s"
+                                 % (self._req.text),
+                                 self._req.text,
+                                 self._req.status_code,
+                                 self._obj,
+                                 self._req.headers)
 
     def _get(self, url, *arg, **args):
-        stream = args.get('stream', False)
-
         self._req = requests.get(url, *arg, **args)
 
         if self._req.encoding is None:
             self._req.encoding = 'utf-8'
 
-        mimetype, _opts = cgi.parse_header(self._req.headers['content-type'])
+        headers = {}
+        for k in self._req.headers:
+            # Normalize headers
+            headers[k.lower()] = self._req.headers[k]
 
-        if not stream and ('text/json' == mimetype
-                           or 'application/json' == mimetype):
+        self._req.headers = headers
+
+        contenttype = self._req.headers.get('content-type', "text/json")
+        mimetype, _opts = cgi.parse_header(contenttype)
+        transfer_encoding = self._req.headers.get('transfer-encoding', '')
+        chunked = transfer_encoding.startswith('chunked')
+
+        if not chunked and ('text/json' == mimetype
+                            or 'application/json' == mimetype):
             self._obj = json.loads(self._req.text)
+        else:
+            self._obj = None
 
         if 200 == self._req.status_code:
             return self._req, self
+
+        elif 400 == self._req.status_code:
+            raise error.InvalidRequestError("Bad API Request: %s"
+                                            % (self._obj['error'], ),
+                                            self._req.text,
+                                            self._req.status_code,
+                                            self._obj,
+                                            self._req.headers)
+
         elif 401 == self._req.status_code:
             raise error.AuthenticationError("Failed to authenticate request",
                                             self._req.text,
                                             self._req.status_code,
                                             self._obj,
                                             self._req.headers)
+
+        elif 403 == self._req.status_code:
+            raise error.PermissionError("Permission denied",
+                                        self._req.text,
+                                        self._req.status_code,
+                                        self._obj,
+                                        self._req.headers)
+
+        else:
+            raise error.APIError("GET: Unhandeled API Error\n\n%s"
+                                 % (self._req.text),
+                                 self._req.text,
+                                 self._req.status_code,
+                                 None,
+                                 self._req.headers)
 
     @classmethod
     def class_name(cls):
@@ -164,12 +202,19 @@ class APIResource(APIObject):
         return str(cls.__name__.lower())
 
     @classmethod
-    def class_url(cls):
+    def class_url(cls, apibase=None):
         cls_name = cls.class_name()
-        return "%s/%s" % (tinymesh.apibase, cls_name,)
 
-    def resource_url(self, key=None):
-        base = self.class_url()
+        return "%s/%s" % (apibase, cls_name,)
+
+    def resource_url(self, key=None, apibase=None):
+        """
+        Build the URL to a Tiny Mesh Cloud Resource
+        """
+        if apibase is None:
+            apibase = self._apibase
+
+        base = self.class_url(apibase=apibase)
 
         if key is not None:
             return "%s/%s" % (base, key)
