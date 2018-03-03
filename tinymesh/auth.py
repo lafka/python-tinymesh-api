@@ -26,11 +26,11 @@ class BasicAuth(APIAuth):
 
 class TokenV1Auth(APIAuth, AuthBase):
     def __init__(self, token):
-        self.secret = token
+        self.secret = token.encode('ascii')
         self.fingerprint = None
 
         if token is not None:
-            self.fingerprint = sha256(token).hexdigest()
+            self.fingerprint = sha256(self.secret).hexdigest()
 
     def authenticate(self, req):
         return self
