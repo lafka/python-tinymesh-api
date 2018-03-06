@@ -12,6 +12,14 @@ class Device(ReadableResource,
     API Resources related to devices
     """
 
+
+
+    def update(self, body, **kwargs):
+        # `body` and `proto/tm` should not be sent upstream
+        filterkeys = ['address', 'key',  'meta', 'network', 'proto/tm']
+
+        super(Device, self).update(body, filterkeys=filterkeys, **kwargs)
+
     def resource_url(self, source=None, apibase=None, **kwargs):
         """
         Get the full url for resource
@@ -21,7 +29,7 @@ class Device(ReadableResource,
         if apibase is None:
             apibase = self._apibase
 
-        baseurl = self.class_url(apibase=apibase, **kwargs)
+        baseurl = self.class_url(apibase=apibase)
 
         network = source.get('network')
 

@@ -92,6 +92,49 @@ class APIObject(dict):
 
 
 class APIResource(APIObject):
+    def _put(self, url, body, *arg, **kwargs):
+
+        stream = kwargs.get('stream', False)
+
+        headers = kwargs.get('headers', {})
+
+        if body is not None:
+            if not isinstance(body, str):
+                body = json.dumps(body)
+                headers['content-type'] = 'application/json'
+
+        self._req = requests.put(url,
+                                 *arg,
+                                 data=body,
+                                 headers=headers,
+                                 **kwargs)
+
+        if self._req.encoding is None:
+            self._req.encoding = 'utf-8'
+
+        mimetype, _opts = cgi.parse_header(self._req.headers['content-type'])
+
+        if not stream and ('text/json' == mimetype
+                           or 'application/json' == mimetype):
+            self._obj = json.loads(self._req.text)
+
+        if 200 == self._req.status_code:
+            return self._req, self
+        if 201 == self._req.status_code:
+            return self._req, self
+        elif 401 == self._req.status_code:
+            raise error.AuthenticationError("Failed to authenticate request",
+                                            self._req.text,
+                                            self._req.status_code,
+                                            self._obj,
+                                            self._req.headers)
+        else:
+            raise error.APIError("POST: Unhandeled API Error\n\n%s"
+                                 % (self._req.text),
+                                 self._req.text,
+                                 self._req.status_code,
+                                 self._obj,
+                                 self._req.headers)
 
     def _post(self, url, body, *arg, **kwargs):
 

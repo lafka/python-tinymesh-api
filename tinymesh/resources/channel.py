@@ -40,7 +40,7 @@ class Channel(CreateableResource,
             apibase = apibase if apibase is not None else tinymesh.apibase
             return "%s/%s" % (tinymesh.apibase, "_channels/io")
 
-        def resource_url(self, source):
+        def resource_url(self, source=None):
             # @todo should check if call is coming from ListableResource before
             #       assuming anything about keys
             if 'network' not in source:
