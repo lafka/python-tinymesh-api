@@ -1,6 +1,6 @@
 import tinymesh
 from tinymesh.resources.abstract import APIResource, CreateableResource
-
+import re
 
 class Message(CreateableResource):
     """
@@ -42,10 +42,10 @@ class Message(CreateableResource):
             }
 
             if date_from is not None:
-                query['date.from'] = date_from
+                query['date.from'] = re.sub(r'\..*$', '', date_from)
 
             if date_to is not None:
-                query['date.to'] = date_to
+                query['date.to'] = re.sub(r'\..*$', '', date_to)
 
             url = self.resource_url(self, apibase=apibase)
             httpreq, resp = APIResource._get(self, url, auth=auth,
